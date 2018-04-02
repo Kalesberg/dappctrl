@@ -2,6 +2,8 @@ package lib
 
 import (
 	"bytes"
+	"dappctrl/eth/contract"
+	"dappctrl/eth/lib/tests"
 	"encoding/hex"
 	"encoding/json"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -11,8 +13,6 @@ import (
 	"log"
 	"math/big"
 	"net/http"
-	"eth/contract"
-	"eth/lib/tests"
 	"testing"
 )
 
@@ -54,6 +54,7 @@ func fetchPSCAddress() string {
 	json.Unmarshal(body, &data)
 
 	PSCAddress = data["contract"].(map[string]interface{})["address"].(string)
+	println(PSCAddress)
 	return PSCAddress
 }
 
@@ -79,6 +80,7 @@ func fetchTestPrivateKey() string {
 	json.Unmarshal(body, &data)
 
 	PrivateKey = data[0].(map[string]interface{})["privateKey"].(string)
+	println(PrivateKey)
 	return PrivateKey
 }
 
@@ -184,7 +186,7 @@ func TestNormalLogsFetching(t *testing.T) {
 	}
 
 	{
-		topics, data := fetchEventData(EthDigestChannelCreated)
+		topics, data := fetchEventData(EthChannelCreated)
 		event, err := NewEventChannelCreated([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
 		failOnErr(err, "Can't create EventChannelCreated")
 
@@ -198,7 +200,7 @@ func TestNormalLogsFetching(t *testing.T) {
 	}
 
 	{
-		topics, data := fetchEventData(EthDigestChannelToppedUp)
+		topics, data := fetchEventData(EthChannelToppedUp)
 		event, err := NewEventChannelToppedUp([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
 		failOnErr(err, "Can't create EventChannelToppedUp")
 
@@ -320,5 +322,47 @@ func TestLogsFetchingWithBrokenNetwork(t *testing.T) {
 		if err == nil {
 			t.Fatal("Error must be returned")
 		}
+	}
+}
+
+func TestBlockNumberParametersParsing(t *testing.T) {
+	node := tests.GethEthereumConfig().Geth
+	client := NewEthereumClient(node.Host, node.Port)
+
+	// It is common practice to write "earliest" and "latest" blocks numbers.
+	// GetLogs must supports this format.
+	_, err := client.GetLogs(
+		fetchPSCAddress(),
+		[]string{"0x" + EthChannelCreated}, "earliest", "latest")
+
+	if err != nil {
+		t.Fatal("It seems, that earliest and/or latest notation is not supported correctly.")
+	}
+
+	// By default, ethereum expects blocks numbers in hex format.
+	checkHexParams := func(blockFrom, blockTo string) {
+		_, err = client.GetLogs(
+			fetchPSCAddress(),
+			[]string{"0x" + EthChannelCreated}, blockFrom, blockTo)
+
+		if err != nil {
+			t.Fatal("It seems, that hex notation is not supported correctly")
+		}
+	}
+
+	checkHexParams("0x01", "0x01")
+	checkHexParams("0x01", "0x10")
+	checkHexParams("0x01", "0x1000")
+	checkHexParams("0x01", "0xFFFFFFFFFFFFFFFF")
+
+	// By default, ethereum expects blocks numbers in hex format.
+	// But, developer might forget it and try to transfer parameters in decimal form.
+	// In this case - error must be reported.
+	_, err = client.GetLogs(
+		fetchPSCAddress(),
+		[]string{"0x" + EthChannelCreated}, "0", "1000")
+
+	if err == nil {
+		t.Fatal("Error must be returned, only hex params must be accepted.")
 	}
 }

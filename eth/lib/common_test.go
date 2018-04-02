@@ -1,10 +1,9 @@
 package lib
 
 import (
+	"dappctrl/eth/lib/tests"
 	"testing"
-	"pxctrl/eth/lib/tests"
 )
-
 
 func TestGasPriceFetching(t *testing.T) {
 	node := tests.GethEthereumConfig().Geth

@@ -27,10 +27,10 @@ and geth node should be available on port `8545`.
 ### Tests running
 1. Ensure test API is up and running: `TARGET=dev npm run dev`;
 1. Wait some period of time (5-10 sec);
-1. `go test pxctrl/eth/lib`
+1. `go test dappctrl/eth/lib`
 
 ### Troubleshooting
 * *Can't fetch private key. It seems that test environment is broken*
 
-Please, check if test API is run and running.
+Please, check if test API is up and running.
 Use commands `npm run stop` and `TARGET=dev npm run dev` to restart test environment.

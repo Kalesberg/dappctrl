@@ -12,8 +12,8 @@ const (
 	// https://codeburst.io/deep-dive-into-ethereum-logs-a8d2047c7371
 	//
 
-	EthDigestChannelCreated         = "a6153987181667023837aee39c3f1a702a16e5e146323ef10fb96844a526143c"
-	EthDigestChannelToppedUp        = "392a992c1a7b756e553d8d97f43d59fafe79bc672808247debc077a6cdaba7b9"
+	EthChannelCreated               = "a6153987181667023837aee39c3f1a702a16e5e146323ef10fb96844a526143c"
+	EthChannelToppedUp              = "392a992c1a7b756e553d8d97f43d59fafe79bc672808247debc077a6cdaba7b9"
 	EthChannelCloseRequested        = "21ff66d79903f9d4ab6ab3c7c903af993e709be2ce2f4532d572925dea741cb1"
 	EthOfferingCreated              = "49d573efb7cbb057727f6cadb4150ba6d5041c4fb55afe606508be636e158127"
 	EthOfferingDeleted              = "21652905a07e2790c3a220d14394aee13681876bfbf38e658fa82ee5afe0c862"
@@ -55,7 +55,7 @@ func NewEventChannelCreated(topics [4]string, hexData string) (*EventChannelCrea
 }
 
 func (e *EventChannelCreated) Digest() string {
-	return EthDigestChannelCreated
+	return EthChannelCreated
 }
 
 type EventChannelToppedUp struct {
@@ -83,7 +83,7 @@ func NewEventChannelToppedUp(topics [4]string, hexData string) (*EventChannelTop
 }
 
 func (e *EventChannelToppedUp) Digest() string {
-	return EthDigestChannelToppedUp
+	return EthChannelToppedUp
 }
 
 type EventChannelCloseRequested struct {
@@ -288,7 +288,6 @@ func validateTopics(topics []string) error {
 	return nil
 }
 
-
 func checkEventDigest(topic string, expectedDigest string, err error) error {
 	if err != nil {
 		return err
@@ -334,7 +333,6 @@ func parseDataFieldAsUint192(hexData string, offset uint8, err error) (*Uint192,
 	return NewUint192(get192BitsDataField(hexData, offset))
 }
 
-
 func topicToHex(topic string) string {
 	if len(topic) <= 2 {
 		return ""
@@ -350,7 +348,7 @@ func toAddressHex(hex string) string {
 }
 
 func get256BitsDataField(hexData string, offset uint8) string {
-	offsetFrom := 2+(offset*64) // skipping "0x"
+	offsetFrom := 2 + (offset * 64) // skipping "0x"
 	offsetTo := offsetFrom + 64
 	if len(hexData) < int(offsetTo) {
 		return ""

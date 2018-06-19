@@ -525,9 +525,84 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 }
 
 func TestClientOfferingMsgSOMCGet(t *testing.T) {
-	t.Skip("TODO")
 	// 1. Get OfferingMessage from SOMC
 	// 2. set msg_status="msg_channel_published"
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreOfferingMsgSOMCGet, data.JobOfferring)
+	defer fxt.Close()
+
+	// Set id for offerring that is about to be created.
+	fxt.job.RelatedID = util.NewUUID()
+	env.updateInTestDB(t, fxt.job)
+
+	// Create eth log records used by job.
+	var curSupply uint16 = 10
+	logData, err := logOfferingCreatedDataArguments.Pack(curSupply)
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
+	offeringHash := common.BytesToHash([]byte{1, 2, 3})
+	minDeposit := big.NewInt(10)
+	topics := data.LogTopics{
+		common.BytesToHash([]byte{}),
+		common.BytesToHash(agentAddr.Bytes()),
+		offeringHash,
+		common.BytesToHash(minDeposit.Bytes()),
+	}
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fxt.job.ID
+	ethLog.Data = data.FromBytes(logData)
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	// Create expected offering.
+	expectedOffering := fix.Offering
+	expectedOffering.ID = util.NewUUID()
+	msg := offer.OfferingMessage(fxt.Account,
+		fxt.TemplateOffer, expectedOffering)
+	msgBytes, err := json.Marshal(msg)
+	util.TestExpectResult(t, "Marshall msg", nil, err)
+	key, err := env.worker.key(fxt.Account.PrivateKey)
+	util.TestExpectResult(t, "Get key", nil, err)
+	packed, err := messages.PackWithSignature(msgBytes, key)
+	util.TestExpectResult(t, "PackWithSignature", nil, err)
+	expectedOffering.RawMsg = data.FromBytes(packed)
+	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+
+	runJob(t, env.worker.ClientOfferingMsgSOMCGet, fixture.job)
+	env.fakeSOMC.WriteFindOfferings(t,
+		[]string{expectedOffering.Hash}, [][]byte{packed})
+
+	created := &data.Offering{}
+	env.selectOneTo(t, created, "WHERE hash=$1", expectedOffering.Hash)
+
+	if expectedOffering.Template != created.Template ||
+		expectedOffering.Product != created.Product ||
+		created.Status != data.MsgChPublished ||
+		expectedOffering.Agent != created.Agent ||
+		expectedOffering.RawMsg != created.RawMsg ||
+		expectedOffering.ServiceName != created.ServiceName ||
+		expectedOffering.Description != created.Description ||
+		expectedOffering.Country != created.Country ||
+		expectedOffering.Supply != created.Supply ||
+		expectedOffering.UnitName != created.UnitName ||
+		expectedOffering.BillingType != created.BillingType ||
+		expectedOffering.SetupPrice != created.SetupPrice ||
+		expectedOffering.UnitPrice != created.UnitPrice ||
+		expectedOffering.MinUnits != created.MinUnits ||
+		expectedOffering.BillingInterval != created.BillingInterval ||
+		expectedOffering.MaxBillingUnitLag != created.MaxBillingUnitLag ||
+		expectedOffering.MaxSuspendTime != created.MaxSuspendTime ||
+		expectedOffering.MaxInactiveTimeSec != created.MaxInactiveTimeSec ||
+		expectedOffering.FreeUnits != created.FreeUnits ||
+		expectedOffering.AdditionalParams != created.AdditionalParams {
+		t.Fatal("wrong offering created")
+	}
 }
 
 func TestClientPreAccountAddBalanceApprove(t *testing.T) {

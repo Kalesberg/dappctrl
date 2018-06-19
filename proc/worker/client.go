@@ -646,3 +646,7 @@ func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
 func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 	return nil
 }
+
+func (w *Worker) ClientPreOfferingMsgSOMCGet(job *data.Job) error {
+	return nil
+}

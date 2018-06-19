@@ -63,9 +63,6 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		common.BytesToHash(clientAddr.Bytes()),
 		data.TestToHash(t, fixture.Offering.Hash),
 	}
-	if err != nil {
-		t.Fatal(err)
-	}
 	ethLog := data.NewTestEthLog()
 	ethLog.TxHash = data.FromBytes(env.ethBack.tx.Hash().Bytes())
 	ethLog.JobID = &fixture.job.ID

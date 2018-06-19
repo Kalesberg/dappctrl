@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/privatix/dappctrl/data"
 )
 
 // TestEndpointParams exported for tests.
@@ -161,6 +163,43 @@ func (s *FakeSOMC) WriteWaitForEndpoint(
 		ID:     100,
 		Method: publishEndpointMethod,
 		Params: data,
+	}
+	s.Write(t, &repl)
+}
+
+func (s *FakeSOMC) WriteFindOfferings(
+	t *testing.T, hashes []string, rawOfferings [][]byte) {
+	req := s.Read(t, findOfferingsMethod)
+	params := findOfferingsParams{}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		t.Fatal("FakeSOM: failed to unmarshal params: ", err)
+	}
+
+	for i, hash := range params.Hashes {
+		if hash != hashes[i] {
+			t.Fatal("FakeSOMC: unexpected hash being searched")
+		}
+	}
+
+	repl := JSONRPCMessage{ID: req.ID, Result: []byte("true")}
+	s.Write(t, &repl)
+
+	time.Sleep(time.Millisecond)
+
+	ret := []findOfferingsResult{}
+	for i, hash := range hashes {
+		ret = append(ret, findOfferingsResult{
+			Hash: hash,
+			Data: data.FromBytes(rawOfferings[i]),
+		})
+	}
+
+	retData, _ := json.Marshal(&ret)
+
+	repl = JSONRPCMessage{
+		ID:     200,
+		Method: findOfferingsMethod,
+		Params: retData,
 	}
 	s.Write(t, &repl)
 }
